@@ -1,0 +1,116 @@
+ERROR 1698 (28000): Access denied for user 'root'@'localhost'
+
+sudo mysql -u root
+mysql> USE mysql;
+mysql> SELECT User, Host, plugin FROM mysql.user;
++------+-----------+-------------+
+| User | Host      | plugin      |
++------+-----------+-------------+
+| root | localhost | unix_socket |
++------+-----------+-------------+
+1 row in set (0.00 sec)
+
+There are 2 ways to solve this:
+
+1.You can set the root user to use the mysql_native_password plugin
+
+2.You can create a new db_user with you system_user (recommended)
+
+
+Option 1:
+
+$ sudo mysql -u root # I had to use "sudo" since is new installation
+
+mysql> USE mysql;
+mysql> UPDATE user SET plugin='mysql_native_password' WHERE User='root';
+mysql> UPDATE user SET plugin='auth_socket' WHERE User='root';
+mysql> UPDATE user SET plugin='' WHERE User='root';
+mysql> FLUSH PRIVILEGES;
+mysql> exit;
+
+$ sudo service mysql restart
+Option 2: (replace YOUR_SYSTEM_USER with the username you have)
+
+$ sudo mysql -u root # I had to use "sudo" since is new installation
+
+mysql> USE mysql;
+mysql> CREATE USER 'pi'@'localhost' IDENTIFIED BY '';
+mysql> GRANT ALL PRIVILEGES ON *.* TO 'pi'@'localhost';
+mysql> UPDATE user SET plugin='' WHERE User='pi';
+mysql> FLUSH PRIVILEGES;
+mysql> exit;
+
+$ service mysql restart
+
+ERROR 1045 (28000): Access denied for user 'root'@'localhost' (using password: YES)
+
+ERROR 1524 (HY000): Plugin 'auth_socket' is not loaded
+Step 1: Stop mysql service
+Stop MySQL service.
+
+$ sudo systemctl stop mysql
+OR
+$ sudo /etc/init.d/mysql stop
+Step 2: Start mysql with mysqld_safe
+Then start mysql service with mysqld_safe and option --skip-grant-tables and keep in running it the background.
+
+$ sudo mysqld_safe --skip-grant-tables &
+[1] 8197
+Step 3: Reset root user password
+
+
+MariaDB [(none)]> use mysql
+MariaDB [mysql]> FLUSH PRIVILEGES;
+GRANT ALL privileges ON mysql.* TO 'admin'@'localhost' with grant option;
+
+use mysql;
+update user set authentication_string=PASSWORD("") where User='root';
+update user set plugin="mysql_native_password" where User='root';  # THIS LINE
+
+flush privileges;
+quit;
+
+UPDATE user set authentication_string=password('secret') where user='root';
+
+use mysql;
+update user set plugin="mysql_native_password";
+
+flush privileges;
+
+UPDATE USER SET plugin="mysql_native_password";
+update user set plugin='' where User='root';
+To get a list of all users in the system, use:
+
+SELECT User, Host, plugin, Password FROM mysql.user;
+
+GRANT ALL PRIVILEGES ON mysql.* TO 'root'@'%' IDENTIFIED BY 'root';
+
+PDATE mysql.user SET authentication_string=PASSWORD('root'), plugin='mysql_native_password' WHERE User='root' AND Host='localhost';
+
+# Stop Your Server First
+sudo service mysql stop
+
+# Make MySQL service directory.
+sudo mkdir /var/run/mysqld
+
+# Give MySQL permission to work with the created directory
+sudo chown mysql: /var/run/mysqld
+
+# Start MySQL, without permission and network checking
+sudo mysqld_safe --skip-grant-tables --skip-networking &
+
+# Log in to your server without any password.
+mysql -uroot mysql
+
+
+# Update the password for the root user:
+UPDATE mysql.user SET authentication_string=PASSWORD('YourNewPasswordBuddy'), plugin='mysql_native_password' WHERE User='root' AND Host='localhost';
+
+#if you omit (AND Host='localhost') section, it updates the root pass regardless of its host
+
+FLUSH PRIVILEGES;
+EXIT;
+
+#Now you can use your new password to login to your Server
+mysql -uroot -p
+
